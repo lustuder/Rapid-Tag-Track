@@ -1,0 +1,972 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Rapid T&amp;T</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<style>
+  /* ── Tokens (Tailwind v4 palette used by the Figma Make design) ─────────── */
+  :root {
+    --brand: #6b7280;
+    --brand-hover: #556170;
+    --brand-active: #4b5563;
+    --page: #f0f0f0;
+    --ink: #1a1a1a;
+    --gray-50: oklch(98.5% .002 247.839);
+    --gray-100: oklch(96.7% .003 264.542);
+    --gray-200: oklch(92.8% .006 264.531);
+    --gray-300: oklch(87.2% .01 258.338);
+    --gray-400: oklch(70.7% .022 261.325);
+    --gray-500: oklch(55.1% .027 264.364);
+    --gray-600: oklch(44.6% .03 256.802);
+    --gray-700: oklch(37.3% .034 259.733);
+    --gray-800: oklch(27.8% .033 256.848);
+    --gray-900: oklch(21% .034 264.665);
+    --red-50: oklch(97.1% .013 17.38);
+    --red-200: oklch(88.5% .062 18.334);
+    --red-400: oklch(70.4% .191 22.216);
+    --red-500: oklch(63.7% .237 25.331);
+    --ease: cubic-bezier(.4, 0, .2, 1);
+    --display: 'DM Sans', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; border: 0 solid; }
+  html, body {
+    color: var(--ink);
+    background-color: var(--page);
+    font-family: Inter, sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button, input, textarea { font: inherit; color: inherit; background: none; }
+  button { cursor: pointer; }
+  a { color: inherit; text-decoration: none; }
+  svg { display: block; flex-shrink: 0; }
+  [hidden] { display: none !important; }
+  input[type=search]::-webkit-search-cancel-button { -webkit-appearance: none; }
+
+  .xs { font-size: .75rem; line-height: 1rem; }
+  .sm { font-size: .875rem; line-height: 1.25rem; }
+  .caps { text-transform: uppercase; letter-spacing: .025em; }
+
+  /* ── Shell ─────────────────────────────────────────────────────────────── */
+  .page { min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 2rem 1rem; }
+  .shell {
+    width: 100%; max-width: 24rem; background: #fff; border-radius: 1rem; overflow: hidden;
+    display: flex; flex-direction: column;
+    min-height: calc(100vh - 4rem); max-height: calc(100vh - 4rem);
+    box-shadow: 0 20px 25px -5px #0000001a, 0 8px 10px -6px #0000001a;
+  }
+
+  .header { background: var(--brand); display: flex; align-items: center; padding: .75rem 1rem; min-height: 52px; flex-shrink: 0; }
+  .header .back { color: #fff; margin: 0 .25rem 0 -.25rem; transition: opacity .15s var(--ease); }
+  .header .back:hover { opacity: .7; }
+  .header h1 { color: #fff; font-family: var(--display); font-weight: 600; font-size: 1rem; line-height: 1.5rem; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .scroll { flex: 1; overflow-y: auto; }
+
+  /* ── Search ────────────────────────────────────────────────────────────── */
+  .search-wrap { padding: .75rem 1rem; border-bottom: 1px solid var(--gray-100); }
+  .search {
+    display: flex; align-items: center; gap: .625rem; padding: 0 .875rem;
+    background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: 9999px;
+    transition: background-color .15s var(--ease), border-color .15s var(--ease);
+  }
+  .search:focus-within { background: #fff; border-color: var(--gray-400); }
+  .search > .icon { color: var(--gray-400); }
+  .search input { width: 100%; padding: .625rem 0; outline: none; color: var(--gray-800); }
+  .search input::placeholder { color: var(--gray-400); }
+  .search .clear { color: var(--gray-300); }
+  .search .clear:hover { color: var(--gray-600); }
+
+  .results-head { padding: .75rem 1.25rem; background: var(--gray-50); border-bottom: 1px solid var(--gray-100); color: var(--gray-400); }
+
+  /* ── Lists ─────────────────────────────────────────────────────────────── */
+  .item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: .875rem 1rem; border-bottom: 1px solid var(--gray-100);
+    transition: background-color .15s var(--ease);
+  }
+  .item:last-child { border-bottom: 0; }
+  .item.clickable { cursor: pointer; }
+  .item.clickable:hover { background: color-mix(in oklab, var(--gray-50) 60%, transparent); }
+  .item.clickable:active { background: var(--gray-50); }
+  .item .body { flex: 1; min-width: 0; }
+  .item .trail { margin-left: .5rem; flex-shrink: 0; display: flex; align-items: center; gap: .25rem; }
+  .item .chev { color: var(--gray-300); margin-left: .25rem; }
+  .item .title { color: var(--gray-800); font-weight: 500; }
+  .item .sub { color: var(--gray-400); margin-top: .125rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .name-row { display: flex; align-items: center; gap: .5rem; }
+  .badge { background: var(--gray-100); color: var(--gray-500); padding: .125rem .5rem; border-radius: 9999px; }
+
+  .row-btn { padding: .375rem; color: var(--gray-300); border-radius: .375rem; transition: color .15s var(--ease), background-color .15s var(--ease); }
+  .row-btn.edit:hover { color: var(--gray-600); background: var(--gray-100); }
+  .row-btn.del:hover { color: var(--red-400); background: var(--red-50); }
+
+  .empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 5rem 1.5rem; text-align: center; color: var(--gray-300); }
+
+  /* ── Buttons ───────────────────────────────────────────────────────────── */
+  .btn {
+    display: flex; align-items: center; justify-content: center; gap: .375rem;
+    font-weight: 500; padding: .625rem 0; border-radius: 9999px;
+    transition: background-color .15s var(--ease);
+  }
+  .btn-primary { background: var(--brand); color: #fff; }
+  .btn-primary:hover { background: var(--brand-hover); }
+  .btn-primary:active { background: var(--brand-active); }
+  .btn-muted { background: var(--gray-100); color: var(--gray-600); }
+  .btn-muted:hover { background: var(--gray-200); }
+  .btn-outline { border: 1px solid var(--gray-200); color: var(--gray-700); }
+  .btn-outline:hover { background: var(--gray-50); }
+  .btn-danger { border: 1px solid var(--red-200); color: var(--red-400); }
+  .btn-danger:hover { background: var(--red-50); }
+  .btn-row { display: flex; gap: .5rem; width: 100%; }
+  .btn-row > .btn { flex: 1; }
+
+  .bottom { padding: 1rem; flex-shrink: 0; border-top: 1px solid var(--gray-100); background: #fff; }
+  .bottom .cam-row { display: flex; justify-content: center; margin-bottom: .75rem; }
+  .bottom .cam { width: 3.5rem; height: 3.5rem; border-radius: 9999px; display: flex; align-items: center; justify-content: center; background: var(--brand); color: #fff; transition: background-color .15s var(--ease); }
+  .bottom .cam:hover { background: var(--brand-hover); }
+  .bottom .cam:active { background: var(--brand-active); }
+  .bottom .main { width: 100%; gap: .5rem; padding: .75rem 0; }
+
+  /* ── Element detail ────────────────────────────────────────────────────── */
+  .detail { padding: 1.25rem; display: flex; flex-direction: column; gap: 1.25rem; }
+  .chips { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+  .chip { background: var(--gray-100); color: var(--gray-600); padding: .25rem .625rem; border-radius: 9999px; }
+  .panel { background: var(--gray-50); border-radius: .75rem; padding: 1rem; }
+  .panel.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 1rem; row-gap: .75rem; }
+  .label { color: var(--gray-400); }
+  .panel .value { color: var(--gray-800); margin-top: .125rem; overflow-wrap: anywhere; }
+  .panel .label.mb { margin-bottom: .25rem; }
+  .comments { color: var(--gray-700); line-height: 1.625; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+  .files { background: var(--gray-50); border-radius: .75rem; overflow: hidden; }
+  .files .label { padding: 1rem 1rem .5rem; }
+  .files a { display: flex; align-items: center; gap: .75rem; padding: .75rem 1rem; border-top: 1px solid var(--gray-100); transition: background-color .15s var(--ease); }
+  .files a:hover { background: var(--gray-100); }
+  .files .ficon { color: var(--gray-400); }
+  .files .fname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--gray-700); }
+  .floor-files { padding: 1rem 1.25rem 0; }
+
+  .qr-card { border: 1px solid var(--gray-100); border-radius: .75rem; padding: 1.25rem; display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+  .qr-card .head { width: 100%; display: flex; align-items: center; gap: .5rem; }
+  .qr-card .head .icon { color: var(--gray-500); }
+  .qr-card .head p { font-weight: 500; color: var(--gray-800); }
+  .qr-card .code { background: #fff; border: 1px solid var(--gray-100); padding: .75rem; border-radius: .75rem; box-shadow: 0 1px 3px 0 #0000001a, 0 1px 2px -1px #0000001a; }
+  .qr-card .meta { text-align: center; }
+  .qr-card .meta .n { font-family: var(--display); font-weight: 600; color: var(--gray-900); }
+  .qr-card .meta .l { color: var(--gray-400); margin-top: .125rem; }
+  .qr-card .qr-url {
+    display: block; max-width: 100%; margin: .375rem auto 0; padding: .125rem .5rem; border-radius: .375rem;
+    font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .6875rem; color: var(--gray-500);
+    overflow-wrap: anywhere; transition: background-color .15s var(--ease);
+  }
+  .qr-card .qr-url:hover { background: var(--gray-50); color: var(--gray-700); }
+
+  /* ── Modal & forms ─────────────────────────────────────────────────────── */
+  .overlay { position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-end; justify-content: center; background: rgb(0 0 0 / .4); }
+  .sheet { background: #fff; border-radius: 1rem 1rem 0 0; width: 100%; max-width: 24rem; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 50px -12px #00000040; }
+  .sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.25rem 1rem; border-bottom: 1px solid var(--gray-100); }
+  .sheet-head h2 { font-family: var(--display); font-weight: 600; font-size: 1rem; color: var(--gray-900); }
+  .sheet-head button { color: var(--gray-400); transition: color .15s var(--ease); }
+  .sheet-head button:hover { color: var(--gray-600); }
+  .sheet-body { padding: 1.25rem; }
+
+  form { display: flex; flex-direction: column; gap: 1rem; }
+  .field { display: flex; flex-direction: column; gap: .375rem; min-width: 0; }
+  .field > label { font-size: .75rem; line-height: 1rem; font-weight: 500; color: var(--gray-500); text-transform: uppercase; letter-spacing: .05em; }
+  .two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+  .inp {
+    width: 100%; background: var(--gray-50); border: 1px solid var(--gray-200); color: var(--gray-900);
+    font-size: .875rem; line-height: 1.25rem; padding: .625rem .75rem; border-radius: .5rem;
+    transition: all .15s var(--ease);
+  }
+  .inp:focus { outline: none; border-color: var(--gray-400); background: #fff; }
+  .inp::placeholder { color: var(--gray-300); }
+  textarea.inp { resize: none; }
+  .form-actions { display: flex; gap: .5rem; padding-top: .5rem; }
+  .form-actions .btn { flex: 1; }
+
+  .picker { display: flex; flex-direction: column; gap: .5rem; }
+  .upload { width: 100%; display: flex; align-items: center; justify-content: center; gap: .5rem; border: 1px dashed var(--gray-300); color: var(--gray-500); padding: .75rem 0; border-radius: .5rem; transition: all .15s var(--ease); }
+  .upload:hover { background: var(--gray-50); border-color: var(--gray-400); }
+  .picker .err { color: var(--red-500); }
+  .chosen { display: flex; align-items: center; gap: .5rem; border-radius: .5rem; background: var(--gray-50); padding: .5rem .75rem; }
+  .chosen .ficon { color: var(--gray-400); }
+  .chosen .fname { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--gray-600); }
+  .chosen .size { color: var(--gray-300); }
+  .chosen button { color: var(--gray-300); }
+  .chosen button:hover { color: var(--red-400); }
+
+  /* ── Toast (camera feedback) ───────────────────────────────────────────── */
+  .toast {
+    position: fixed; left: 50%; bottom: 2.5rem; transform: translateX(-50%); z-index: 60;
+    background: var(--gray-800); color: #fff; padding: .5rem 1rem; border-radius: 9999px;
+    box-shadow: 0 10px 15px -3px #0000001a;
+  }
+
+  @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  .animate-in { animation: .18s ease-out forwards slideUp; }
+
+  :focus-visible { outline: 2px solid var(--gray-400); outline-offset: 2px; }
+  .search input:focus-visible, .inp:focus-visible { outline: none; }
+
+  @media (max-width: 480px) {
+    .page { padding: 0; }
+    .shell { border-radius: 0; min-height: 100vh; max-height: 100vh; min-height: 100dvh; max-height: 100dvh; box-shadow: none; }
+  }
+  @media print { .no-print { display: none !important; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="shell">
+    <header class="header">
+      <button class="back" id="back" type="button" aria-label="Back" hidden></button>
+      <h1 id="title">Your Projects</h1>
+    </header>
+
+    <main class="scroll" id="scroll">
+      <div class="search-wrap" id="searchWrap">
+        <div class="search">
+          <span class="icon" id="searchIcon"></span>
+          <input type="search" id="search" class="sm" placeholder="Search building elements" aria-label="Search building elements" autocomplete="off" />
+          <button type="button" class="clear" id="clearSearch" aria-label="Clear search" hidden></button>
+        </div>
+      </div>
+      <div id="content"></div>
+    </main>
+
+    <footer class="bottom" id="bottom">
+      <div class="cam-row" id="camRow">
+        <input type="file" id="camInput" accept="image/*" capture="environment" hidden />
+        <button type="button" class="cam" id="camBtn" aria-label="Open camera" title="Open camera"></button>
+      </div>
+      <button type="button" class="btn btn-primary main sm" id="bottomBtn"></button>
+    </footer>
+  </div>
+</div>
+
+<div id="modalRoot"></div>
+
+<script>
+(() => {
+  // ─── Icons ──────────────────────────────────────────────────────────────────
+  const I = {
+    chevRight: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>',
+    chevLeft: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
+    plus: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+    qr: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="5" y="5" width="3" height="3" fill="currentColor" stroke="none"/><rect x="16" y="5" width="3" height="3" fill="currentColor" stroke="none"/><rect x="5" y="16" width="3" height="3" fill="currentColor" stroke="none"/><path d="M14 14h3M17 14v3M14 17h3M17 17v3M14 20h3"/></svg>',
+    close: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>',
+    trash: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>',
+    edit: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
+    download: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>',
+    print: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>',
+    search: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>',
+    file: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>',
+    camera: '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5 13 3h-2L9.5 5H5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-4.5Z"/><circle cx="12" cy="12.5" r="4"/></svg>',
+  };
+
+  // ─── Helpers ────────────────────────────────────────────────────────────────
+  const $ = id => document.getElementById(id);
+  const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+  const now = () => new Date().toISOString();
+  const join = (arr, sep = ' · ') => arr.filter(Boolean).join(sep);
+
+  // ─── Persistence (same keys as the Figma Make prototype) ───────────────────
+  const KEYS = { projects: 'bm-projects', floors: 'bm-floors', rooms: 'bm-rooms', elements: 'bm-elements' };
+  const load = k => { try { const s = localStorage.getItem(k); return s ? JSON.parse(s) : []; } catch { return []; } };
+  const db = {
+    projects: load(KEYS.projects),
+    floors: load(KEYS.floors),
+    rooms: load(KEYS.rooms),
+    elements: load(KEYS.elements),
+  };
+  function persist() {
+    for (const k in KEYS) {
+      try { localStorage.setItem(KEYS[k], JSON.stringify(db[k])); }
+      catch (err) { if (err && err.name === 'QuotaExceededError') toast('Storage is full — remove some attached files.'); }
+    }
+  }
+
+  // ─── Slugs ──────────────────────────────────────────────────────────────────
+  // Every record gets a URL-safe slug from its name ("Technical Room" → technical-room),
+  // unique among its siblings. Renaming keeps the old slugs as aliases, so printed QR
+  // codes and bookmarks keep working and are redirected to the new address.
+  const KINDS = ['project', 'floor', 'room', 'element'];
+  const COLLECTION = { project: 'projects', floor: 'floors', room: 'rooms', element: 'elements' };
+  const PARENT_KEY = { floor: 'projectId', room: 'floorId', element: 'roomId' };
+  const ROUTE_KEYS = { project: 'projectId', floor: 'floorId', room: 'roomId', element: 'elementId' };
+
+  function slugify(name, fallback) {
+    const s = String(name ?? '').toLowerCase()
+      .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
+      .normalize('NFKD').replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+      .slice(0, 60).replace(/-+$/, '');
+    return s || fallback;
+  }
+
+  const siblingsOf = (kind, parentId) =>
+    db[COLLECTION[kind]].filter(x => kind === 'project' || x[PARENT_KEY[kind]] === parentId);
+
+  function uniqueSlug(kind, name, parentId, selfId) {
+    const base = slugify(name, kind);
+    const taken = new Set(siblingsOf(kind, parentId)
+      .filter(x => x.id !== selfId)
+      .flatMap(x => [x.slug, ...(x.aliases ?? [])]));
+    let slug = base;
+    for (let i = 2; taken.has(slug); i++) slug = `${base}-${i}`;
+    return slug;
+  }
+
+  // Records saved before slugs existed get one, oldest first so they keep the plain name.
+  (function migrateSlugs() {
+    let changed = false;
+    for (const kind of KINDS) {
+      [...db[COLLECTION[kind]]]
+        .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)))
+        .forEach(rec => {
+          if (rec.slug) return;
+          rec.slug = uniqueSlug(kind, rec.name, rec[PARENT_KEY[kind]], rec.id);
+          changed = true;
+        });
+    }
+    if (changed) persist();
+  })();
+
+  // ─── Router ─────────────────────────────────────────────────────────────────
+  // Readable, nested URLs:  /                                    Your Projects
+  //                         /mfh-leimbach                         project
+  //                         /mfh-leimbach/ug                      floor
+  //                         /mfh-leimbach/ug/technical-room       room
+  //                         /mfh-leimbach/ug/technical-room/fuse-box   element
+  // Served over http(s) these are real paths (History API; the server falls back to
+  // index.html, see server.py). Opened from disk they live in the hash: #/mfh-leimbach/…
+  const HISTORY_MODE = location.protocol === 'http:' || location.protocol === 'https:';
+
+  // The record chain [project, floor, room, element] down to a view, or null if broken.
+  function chainFor(v) {
+    if (!KINDS.includes(v.type)) return null;
+    const chain = [];
+    let rec = db[COLLECTION[v.type]].find(x => x.id === v[ROUTE_KEYS[v.type]]);
+    for (let i = KINDS.indexOf(v.type); i >= 0; i--) {
+      if (!rec) return null;
+      chain.unshift(rec);
+      if (i > 0) rec = db[COLLECTION[KINDS[i - 1]]].find(x => x.id === rec[PARENT_KEY[KINDS[i]]]);
+    }
+    return chain;
+  }
+
+  const currentPath = () => HISTORY_MODE ? location.pathname : (location.hash.slice(1) || '/');
+
+  function pathFor(v) {
+    if (v.type === 'projects') return '/';
+    const chain = chainFor(v);
+    return chain ? '/' + chain.map(r => r.slug).join('/') : currentPath();
+  }
+  const hrefFor = v => HISTORY_MODE ? pathFor(v) : `#${pathFor(v)}`;
+  const absoluteUrl = v => new URL(hrefFor(v), location.href).href;
+
+  function viewFromPath(path) {
+    let segs;
+    try { segs = path.split('/').filter(Boolean).map(s => decodeURIComponent(s).toLowerCase()); }
+    catch { return { type: 'missing', noun: 'page' }; }
+    if (segs.length === 0) return { type: 'projects' };
+
+    // Walk the hierarchy segment by segment; current slugs win over old aliases.
+    let parentId;
+    let v = null;
+    for (let i = 0; i < segs.length && i < KINDS.length; i++) {
+      const kind = KINDS[i];
+      const sibs = siblingsOf(kind, parentId);
+      const rec = sibs.find(x => x.slug === segs[i]) ?? sibs.find(x => x.aliases?.includes(segs[i]));
+      if (!rec) { v = null; break; }
+      v = { type: kind, [ROUTE_KEYS[kind]]: rec.id };
+      parentId = rec.id;
+    }
+    if (v && segs.length <= KINDS.length) return v;
+
+    // Links from the earlier id-based scheme (/element/<id>) still resolve.
+    const legacy = path.match(/^\/(project|floor|room|element)\/([^/]+)\/?$/);
+    if (legacy && db[COLLECTION[legacy[1]]].some(x => x.id === legacy[2])) {
+      return { type: legacy[1], [ROUTE_KEYS[legacy[1]]]: legacy[2] };
+    }
+    return { type: 'missing', noun: KINDS[segs.length - 1] ?? 'page' };
+  }
+
+  function writeUrl(v, replace) {
+    if (pathFor(v) === currentPath()) return;
+    try { history[replace ? 'replaceState' : 'pushState'](null, '', hrefFor(v)); } catch { /* e.g. sandboxed data: URLs */ }
+  }
+
+  // ─── UI state ───────────────────────────────────────────────────────────────
+  let view = viewFromPath(currentPath());
+  let searchQuery = '';
+  writeUrl(view, true); // canonicalise aliases and legacy /element/<id> links
+
+  const getProject = id => db.projects.find(p => p.id === id);
+  const getFloor = id => db.floors.find(f => f.id === id);
+  const getRoom = id => db.rooms.find(r => r.id === id);
+  const getElement = id => db.elements.find(e => e.id === id);
+
+  function context() {
+    const element = view.type === 'element' ? getElement(view.elementId) : undefined;
+    const room = view.type === 'room' ? getRoom(view.roomId) : element ? getRoom(element.roomId) : undefined;
+    const floor = view.type === 'floor' ? getFloor(view.floorId) : room ? getFloor(room.floorId) : undefined;
+    const project = view.type === 'project' ? getProject(view.projectId) : floor ? getProject(floor.projectId) : undefined;
+    return { project, floor, room, element };
+  }
+
+  function go(next, { replace = false } = {}) {
+    view = next;
+    writeUrl(next, replace);
+    render();
+    $('scroll').scrollTop = 0;
+  }
+
+  // A route whose record no longer exists on this device (stale link, deleted item,
+  // or a QR code scanned on a phone that doesn't hold this data).
+  function isMissing({ project, floor, room, element }) {
+    return view.type === 'missing'
+      || (view.type === 'project' && !project)
+      || (view.type === 'floor' && !(floor && project))
+      || (view.type === 'room' && !(room && floor && project))
+      || (view.type === 'element' && !(element && room && floor && project));
+  }
+
+  // ─── CRUD (cascading deletes, as in the prototype) ─────────────────────────
+  function deleteProject(id) {
+    const fids = db.floors.filter(f => f.projectId === id).map(f => f.id);
+    const rids = db.rooms.filter(r => fids.includes(r.floorId)).map(r => r.id);
+    db.projects = db.projects.filter(p => p.id !== id);
+    db.floors = db.floors.filter(f => f.projectId !== id);
+    db.rooms = db.rooms.filter(r => !fids.includes(r.floorId));
+    db.elements = db.elements.filter(e => !rids.includes(e.roomId));
+  }
+  function deleteFloor(id) {
+    const rids = db.rooms.filter(r => r.floorId === id).map(r => r.id);
+    db.floors = db.floors.filter(f => f.id !== id);
+    db.rooms = db.rooms.filter(r => r.floorId !== id);
+    db.elements = db.elements.filter(e => !rids.includes(e.roomId));
+  }
+  function deleteRoom(id) {
+    db.rooms = db.rooms.filter(r => r.id !== id);
+    db.elements = db.elements.filter(e => e.roomId !== id);
+  }
+  function deleteElement(id) {
+    db.elements = db.elements.filter(e => e.id !== id);
+  }
+
+  const DELETE = { project: deleteProject, floor: deleteFloor, room: deleteRoom, element: deleteElement };
+
+  function save(kind, data, editing) {
+    const col = COLLECTION[kind];
+    if (editing) {
+      const current = db[col].find(x => x.id === editing.id);
+      const parentId = current[PARENT_KEY[kind]];
+      const slug = current.slug && slugify(data.name, kind) === slugify(current.name, kind)
+        ? current.slug // name unchanged (or only cosmetically): keep the URL stable
+        : uniqueSlug(kind, data.name, parentId, current.id);
+      // A rename moves the URL; the old slug stays as an alias so existing links still resolve.
+      const aliases = slug === current.slug
+        ? current.aliases
+        : [...new Set([...(current.aliases ?? []), current.slug])].filter(a => a && a !== slug);
+      db[col] = db[col].map(x => x.id === current.id ? { ...x, ...data, slug, aliases } : x);
+    } else {
+      const parentId = kind === 'project' ? undefined : view[ROUTE_KEYS[KINDS[KINDS.indexOf(kind) - 1]]];
+      const parent = kind === 'project' ? {} : { [PARENT_KEY[kind]]: parentId };
+      const id = uid();
+      const slug = uniqueSlug(kind, data.name, parentId, id);
+      db[col] = [...db[col], { ...data, ...parent, id, slug, createdAt: now() }];
+    }
+    persist();
+    closeModal();
+    writeUrl(view, true); // renaming the current item (or an ancestor) updates the address bar
+    render();
+  }
+
+  // ─── Render pieces ──────────────────────────────────────────────────────────
+  const empty = msg => `<div class="empty"><p class="sm">${esc(msg)}</p></div>`;
+
+  function listItem({ go: target, body, kind, id }) {
+    const trail = kind
+      ? `<div class="trail"><button type="button" class="row-btn edit" data-edit="${kind}" data-id="${id}" aria-label="Edit">${I.edit}</button><button type="button" class="row-btn del" data-del="${kind}" data-id="${id}" aria-label="Delete">${I.trash}</button></div>`
+      : `<span class="chev">${I.chevRight}</span>`;
+    return `<div class="item clickable" role="button" tabindex="0" data-go='${esc(JSON.stringify(target))}'><div class="body">${body}</div>${trail}</div>`;
+  }
+
+  const nameWithCount = el => `<div class="name-row"><p class="title sm">${esc(el.name)}</p><span class="badge xs">×${esc(el.count)}</span></div>`;
+
+  function attachmentList(files) {
+    if (!files || !files.length) return '';
+    return `<section class="files"><p class="label xs caps">Files</p>${files.map(f =>
+      `<a href="${esc(f.dataUrl)}" download="${esc(f.name)}"><span class="ficon">${I.file}</span><span class="fname sm">${esc(f.name)}</span>${I.download}</a>`
+    ).join('')}</section>`;
+  }
+
+  function searchResultsHTML(q) {
+    const results = db.elements.filter(el => {
+      const room = getRoom(el.roomId);
+      const floor = room ? getFloor(room.floorId) : undefined;
+      const project = floor ? getProject(floor.projectId) : undefined;
+      return [el.name, el.material, el.dimensions, el.elementType, el.comments, room?.name, floor?.name, project?.name]
+        .some(v => v && String(v).toLowerCase().includes(q));
+    });
+    const head = `<div class="results-head"><p class="xs caps">${results.length} ${results.length === 1 ? 'element' : 'elements'} found</p></div>`;
+    const body = results.length === 0
+      ? empty(`No elements match “${searchQuery.trim()}”.`)
+      : results.map(el => {
+          const room = getRoom(el.roomId);
+          const floor = room ? getFloor(room.floorId) : undefined;
+          const project = floor ? getProject(floor.projectId) : undefined;
+          return listItem({
+            go: { type: 'element', elementId: el.id, fromSearch: true },
+            body: nameWithCount(el) + `<p class="sub xs">${esc(join([el.elementType, project?.name, floor?.name, room?.name]))}</p>`,
+          });
+        }).join('');
+    return `<div class="animate-in">${head}${body}</div>`;
+  }
+
+  function elementDetailHTML({ element: el, room, floor, project }) {
+    const info = [
+      ['Material', el.material],
+      ['Dimensions', el.dimensions],
+      ['Element type', el.elementType],
+      ['Quantity', String(el.count)],
+    ].filter(([, v]) => v);
+    return `<div class="detail animate-in">
+      <div class="chips">
+        ${el.elementType ? `<span class="chip xs">${esc(el.elementType)}</span>` : ''}
+        <span class="chip xs">Quantity ${esc(el.count)}</span>
+      </div>
+      <section class="panel grid">
+        ${info.map(([l, v]) => `<div><p class="label xs caps">${l}</p><p class="value sm">${esc(v)}</p></div>`).join('')}
+      </section>
+      <section class="panel">
+        <p class="label xs caps mb">Location</p>
+        <p class="value sm" style="margin-top:0">${esc(project.name)} › ${esc(floor.name)} › ${esc(room.name)}</p>
+        ${project.address ? `<p class="label xs" style="margin-top:.125rem">${esc(project.address)}</p>` : ''}
+      </section>
+      ${el.comments ? `<section class="panel"><p class="label xs caps mb">Comments</p><p class="comments sm">${esc(el.comments)}</p></section>` : ''}
+      ${attachmentList(el.files)}
+      <section class="qr-card">
+        <div class="head"><span class="icon">${I.qr}</span><p class="sm">Element QR code</p></div>
+        <div class="code" id="qrBox">${qrSVG(elementUrl(el))}</div>
+        <div class="meta">
+          <p class="n">${esc(el.name)}</p>
+          <p class="l xs">${esc(project.name)} · ${esc(floor.name)} · ${esc(room.name)}</p>
+          <button type="button" class="qr-url xs" data-action="copy-url" title="Copy link">${esc(elementUrl(el))}</button>
+        </div>
+        <div class="btn-row no-print">
+          <button type="button" class="btn btn-outline sm" data-action="qr-download">${I.download} Download PNG</button>
+          <button type="button" class="btn btn-primary sm" data-action="qr-print">${I.print} Print</button>
+        </div>
+      </section>
+      <div class="btn-row">
+        <button type="button" class="btn btn-primary sm" data-edit="element" data-id="${el.id}">${I.edit} Edit</button>
+        <button type="button" class="btn btn-danger sm" data-action="delete-current">${I.trash} Delete</button>
+      </div>
+    </div>`;
+  }
+
+  // ─── Main render ────────────────────────────────────────────────────────────
+  function render() {
+    const ctx = context();
+
+    if (isMissing(ctx)) {
+      const noun = view.type === 'missing' ? view.noun : view.type;
+      $('title').textContent = 'Not found';
+      document.title = 'Not found · Rapid T&T';
+      $('back').hidden = false;
+      $('searchWrap').hidden = true;
+      $('bottom').hidden = true;
+      $('content').innerHTML = `<div class="empty animate-in">
+        <p class="sm" style="color:var(--gray-500)">This ${noun} doesn’t exist on this device.</p>
+        <p class="xs" style="margin-top:.25rem">It may have been deleted, or it was created in another browser.</p>
+        <button type="button" class="btn btn-primary sm" style="margin-top:1.25rem;padding:.625rem 1.25rem" data-go='{"type":"projects"}'>Go to Your Projects</button>
+      </div>`;
+      return;
+    }
+
+    // Header
+    $('title').textContent =
+      view.type === 'projects' ? 'Your Projects'
+      : view.type === 'project' ? ctx.project.name
+      : view.type === 'floor' ? ctx.floor.name
+      : view.type === 'room' ? ctx.room.name
+      : ctx.element.name;
+    $('back').hidden = view.type === 'projects';
+    document.title = view.type === 'projects' ? 'Rapid T&T' : `${$('title').textContent} · Rapid T&T`;
+
+    // Search bar (kept in the DOM so focus survives re-renders)
+    $('searchWrap').hidden = view.type === 'element';
+    $('clearSearch').hidden = !searchQuery;
+
+    // Bottom bar
+    const label = { projects: 'Create new Project', project: 'Add Floor', floor: 'Add Room', room: 'Add Element' }[view.type];
+    $('bottom').hidden = !label;
+    $('camRow').hidden = view.type !== 'projects';
+    if (label) $('bottomBtn').innerHTML = `${I.plus} ${label}`;
+
+    // Content
+    const q = searchQuery.trim().toLowerCase();
+    let html = '';
+    if (q && view.type !== 'element') {
+      html = searchResultsHTML(q);
+    } else if (view.type === 'projects') {
+      html = db.projects.length === 0
+        ? empty('No projects yet. Create your first project.')
+        : db.projects.map(p => listItem({
+            go: { type: 'project', projectId: p.id }, kind: 'project', id: p.id,
+            body: `<p class="title sm">${esc(p.name)}</p>${(p.client || p.address) ? `<p class="sub xs">${esc(join([p.client, p.address]))}</p>` : ''}`,
+          })).join('');
+    } else if (view.type === 'project') {
+      const list = db.floors.filter(f => f.projectId === view.projectId);
+      html = list.length === 0
+        ? empty('No floors yet. Add the first floor.')
+        : list.map(f => listItem({
+            go: { type: 'floor', floorId: f.id }, kind: 'floor', id: f.id,
+            body: `<p class="title sm">${esc(f.name)}</p>${f.level ? `<p class="sub xs">Level ${esc(f.level)}</p>` : ''}`,
+          })).join('');
+    } else if (view.type === 'floor') {
+      const list = db.rooms.filter(r => r.floorId === view.floorId);
+      const files = attachmentList(ctx.floor.files);
+      html = (files ? `<div class="floor-files">${files}</div>` : '') + (list.length === 0
+        ? empty('No rooms yet. Add the first room.')
+        : list.map(r => listItem({
+            go: { type: 'room', roomId: r.id }, kind: 'room', id: r.id,
+            body: `<p class="title sm">${esc(r.name)}</p>${r.description ? `<p class="sub xs">${esc(r.description)}</p>` : ''}`,
+          })).join(''));
+    } else if (view.type === 'room') {
+      const list = db.elements.filter(e => e.roomId === view.roomId);
+      html = list.length === 0
+        ? empty('No elements yet. Add the first element.')
+        : list.map(el => listItem({
+            go: { type: 'element', elementId: el.id }, kind: 'element', id: el.id,
+            body: nameWithCount(el) + ((el.elementType || el.material) ? `<p class="sub xs" style="white-space:normal">${esc(join([el.elementType, el.material]))}</p>` : ''),
+          })).join('');
+    } else if (view.type === 'element') {
+      html = elementDetailHTML(ctx);
+    }
+    $('content').innerHTML = html;
+  }
+
+  // ─── Back navigation ────────────────────────────────────────────────────────
+  function goBack() {
+    const ctx = context();
+    const { floor, room } = ctx;
+    if (isMissing(ctx)) go({ type: 'projects' });
+    else if (view.type === 'project') go({ type: 'projects' });
+    else if (view.type === 'floor') go({ type: 'project', projectId: floor.projectId });
+    else if (view.type === 'room') go({ type: 'floor', floorId: room.floorId });
+    else if (view.type === 'element') go({ type: 'room', roomId: room.id });
+  }
+
+  // Browser back/forward and hand-edited URLs
+  const syncFromUrl = () => { view = viewFromPath(currentPath()); writeUrl(view, true); render(); };
+  window.addEventListener('popstate', syncFromUrl);
+  if (!HISTORY_MODE) window.addEventListener('hashchange', syncFromUrl);
+
+  // ─── Modal + forms ──────────────────────────────────────────────────────────
+  const FORMS = {
+    project: {
+      title: e => e ? 'Edit Project' : 'New Project',
+      submit: e => e ? 'Save Changes' : 'Create Project',
+      fields: [
+        { k: 'name', label: 'Project Name', ph: 'e.g. Main Office Renovation', required: true },
+        { k: 'client', label: 'Client', ph: 'e.g. Acme Corp' },
+        { k: 'address', label: 'Address', ph: 'e.g. 123 Business Ave' },
+        { k: 'description', label: 'Description', ph: 'Optional notes…', area: 64 },
+      ],
+    },
+    floor: {
+      title: e => e ? 'Edit Floor' : 'Add Floor',
+      submit: e => e ? 'Save Changes' : 'Add Floor',
+      fields: [
+        { k: 'name', label: 'Floor Name', ph: 'e.g. Ground Floor', required: true },
+        { k: 'level', label: 'Level', ph: 'e.g. 0, 1, B1…' },
+        { k: 'description', label: 'Notes', ph: 'Optional…', area: 56 },
+        { k: 'files', label: 'Files', files: true },
+      ],
+    },
+    room: {
+      title: e => e ? 'Edit Room' : 'Add Room',
+      submit: e => e ? 'Save Changes' : 'Add Room',
+      fields: [
+        { k: 'name', label: 'Room Name', ph: 'e.g. Server Room', required: true },
+        { k: 'description', label: 'Notes', ph: 'Optional…', area: 56 },
+      ],
+    },
+    element: {
+      title: e => e ? 'Edit Element' : 'Add Element',
+      submit: e => e ? 'Save Changes' : 'Add Element',
+      fields: [
+        { k: 'name', label: 'Element Name', ph: 'e.g. Exterior wall', required: true },
+        [{ k: 'material', label: 'Material', ph: 'e.g. Concrete' }, { k: 'dimensions', label: 'Dimensions', ph: 'e.g. 4 × 2.5 m' }],
+        [{ k: 'elementType', label: 'Element Type', ph: 'e.g. Wall', required: true }, { k: 'count', label: 'Quantity', number: true, required: true }],
+        { k: 'comments', label: 'Comments', ph: 'Add comments about this element…', area: 80 },
+        { k: 'files', label: 'Files', files: true },
+      ],
+    },
+  };
+
+  const MAX_FILE_SIZE = 1_500_000;
+  let modal = null; // { kind, editing, files, error }
+
+  function fieldHTML(f, initial) {
+    const id = `f-${f.k}`;
+    let control;
+    if (f.files) {
+      control = `<div class="picker" id="picker"></div>`;
+    } else if (f.area) {
+      control = `<textarea class="inp" id="${id}" name="${f.k}" style="height:${f.area}px" placeholder="${esc(f.ph)}">${esc(initial?.[f.k] ?? '')}</textarea>`;
+    } else if (f.number) {
+      control = `<input class="inp" id="${id}" name="${f.k}" type="number" min="1" step="1" value="${esc(initial?.[f.k] ?? 1)}" required />`;
+    } else {
+      control = `<input class="inp" id="${id}" name="${f.k}" value="${esc(initial?.[f.k] ?? '')}" placeholder="${esc(f.ph)}"${f.required ? ' required' : ''} />`;
+    }
+    return `<div class="field"><label${f.files ? '' : ` for="${id}"`}>${esc(f.label)}</label>${control}</div>`;
+  }
+
+  function openModal(kind, editing = null) {
+    const def = FORMS[kind];
+    modal = { kind, editing, files: [...(editing?.files ?? [])], error: '' };
+    const fields = def.fields.map(f => Array.isArray(f)
+      ? `<div class="two">${f.map(x => fieldHTML(x, editing)).join('')}</div>`
+      : fieldHTML(f, editing)).join('');
+    $('modalRoot').innerHTML = `
+      <div class="overlay no-print" id="overlay">
+        <div class="sheet animate-in" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+          <div class="sheet-head">
+            <h2 id="modalTitle">${def.title(editing)}</h2>
+            <button type="button" data-action="close-modal" aria-label="Close">${I.close}</button>
+          </div>
+          <div class="sheet-body">
+            <form id="modalForm" novalidate>
+              ${fields}
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary sm">${def.submit(editing)}</button>
+                <button type="button" class="btn btn-muted sm" data-action="close-modal">Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>`;
+    renderPicker();
+    document.body.style.overflow = 'hidden';
+    const first = $('modalForm').querySelector('input, textarea');
+    if (first) first.focus();
+  }
+
+  function closeModal() {
+    modal = null;
+    $('modalRoot').innerHTML = '';
+    document.body.style.overflow = '';
+  }
+
+  function renderPicker() {
+    const box = $('picker'); if (!box || !modal) return;
+    box.innerHTML = `
+      <input type="file" id="fileInput" multiple hidden />
+      <button type="button" class="upload sm" data-action="pick-files">${I.file} Upload files</button>
+      ${modal.error ? `<p class="err xs">${esc(modal.error)}</p>` : ''}
+      ${modal.files.map(f => `
+        <div class="chosen">
+          <span class="ficon">${I.file}</span>
+          <span class="fname xs">${esc(f.name)}</span>
+          <span class="size xs">${Math.max(1, Math.round(f.size / 1024))} KB</span>
+          <button type="button" data-remove-file="${f.id}" aria-label="Remove ${esc(f.name)}">${I.close}</button>
+        </div>`).join('')}`;
+  }
+
+  async function addFiles(list) {
+    if (!list || !modal) return;
+    const incoming = Array.from(list);
+    const oversized = incoming.find(f => f.size > MAX_FILE_SIZE);
+    if (oversized) { modal.error = `${oversized.name} is too large. Files must be under 1.5 MB.`; renderPicker(); return; }
+    modal.error = '';
+    const read = file => new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve({ id: uid(), name: file.name, type: file.type || 'application/octet-stream', size: file.size, dataUrl: String(r.result) });
+      r.onerror = () => reject(r.error);
+      r.readAsDataURL(file);
+    });
+    const added = await Promise.all(incoming.map(read));
+    modal.files = [...modal.files, ...added];
+    renderPicker();
+  }
+
+  function submitModal(form) {
+    // Native validation bubbles (form is novalidate so we can focus the first invalid field ourselves)
+    if (!form.checkValidity()) { form.reportValidity(); return; }
+    const { kind, editing } = modal;
+    const val = k => (form.elements[k]?.value ?? '').trim();
+    const data =
+      kind === 'project' ? { name: val('name'), client: val('client'), address: val('address'), description: val('description') }
+      : kind === 'floor' ? { name: val('name'), level: val('level'), description: val('description'), files: modal.files }
+      : kind === 'room' ? { name: val('name'), description: val('description') }
+      : { name: val('name'), material: val('material'), dimensions: val('dimensions'), elementType: val('elementType'),
+          count: Math.max(1, Math.floor(Number(val('count')) || 1)), comments: form.elements.comments.value, files: modal.files };
+    save(kind, data, editing);
+  }
+
+  // ─── QR code ────────────────────────────────────────────────────────────────
+  // The QR code encodes this element's own page, e.g. http://localhost:8000/element/abc123
+  const elementUrl = el => absoluteUrl({ type: 'element', elementId: el.id });
+
+  function qrSVG(text, size = 180) {
+    if (typeof qrcode === 'undefined') return `<div style="width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;text-align:center" class="xs label">QR library failed to load</div>`;
+    qrcode.stringToBytes = qrcode.stringToBytesFuncs['UTF-8'];
+    const qr = qrcode(0, 'M');
+    qr.addData(text, 'Byte');
+    qr.make();
+    const n = qr.getModuleCount();
+    let d = '';
+    for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) d += `M${c} ${r}h1v1H${c}z`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${n} ${n}" shape-rendering="crispEdges" id="qrSvg"><path fill="#ffffff" d="M0,0 h${n}v${n}H0z"/><path fill="#111111" d="${d}"/></svg>`;
+  }
+
+  function qrDownload() {
+    const { element: el, room, floor, project } = context();
+    const svg = $('qrSvg'); if (!svg || !el) return;
+    const serialized = new XMLSerializer().serializeToString(svg);
+    const canvas = document.createElement('canvas');
+    const sz = 400; canvas.width = sz; canvas.height = sz + 100;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const img = new Image();
+    img.onload = () => {
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(img, (sz - 280) / 2, 20, 280, 280);
+      ctx.fillStyle = '#111'; ctx.font = 'bold 14px DM Sans, sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(el.name, sz / 2, 330);
+      ctx.font = '11px Inter, sans-serif'; ctx.fillStyle = '#666';
+      ctx.fillText(`${project.name} · ${floor.name} · ${room.name}`, sz / 2, 350);
+      ctx.font = '10px Inter, sans-serif'; ctx.fillStyle = '#999';
+      ctx.fillText(`${el.elementType} · Quantity ${el.count}`, sz / 2, 368);
+      ctx.font = '10px JetBrains Mono, monospace'; ctx.fillStyle = '#9ca3af';
+      ctx.fillText(elementUrl(el), sz / 2, 392, sz - 40);
+      const a = document.createElement('a');
+      a.download = `qr-${el.name.toLowerCase().replace(/\s+/g, '-')}.png`;
+      a.href = canvas.toDataURL('image/png'); a.click();
+    };
+    img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(serialized)}`;
+  }
+
+  function qrPrint() {
+    const { element: el, room, floor, project } = context();
+    const svg = $('qrSvg'); if (!svg || !el) return;
+    const serialized = new XMLSerializer().serializeToString(svg);
+    const win = window.open('', '_blank'); if (!win) { toast('Allow pop-ups to print the QR code.'); return; }
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>QR — ${esc(el.name)}</title>
+      <style>body{margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:Inter,sans-serif;background:#fff;}.card{text-align:center;padding:32px;border:1px solid #e5e7eb;border-radius:8px;max-width:280px;}.card img{width:200px;height:200px;image-rendering:pixelated;}.name{font-weight:700;font-size:15px;margin-top:12px;color:#111;}.meta{font-size:11px;color:#666;margin-top:4px;}.detail{font-size:10px;color:#999;margin-top:3px;}.url{font-family:monospace;font-size:9px;color:#9ca3af;margin-top:6px;word-break:break-all;}</style></head>
+      <body><div class="card"><img src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(serialized)}" /><div class="name">${esc(el.name)}</div><div class="meta">${esc(project.name)} · ${esc(floor.name)} · ${esc(room.name)}</div><div class="detail">${esc(el.elementType)} · Quantity ${esc(el.count)}</div><div class="url">${esc(elementUrl(el))}</div></div>
+      <script>window.onload=()=>{window.print();window.close();}<\/script></body></html>`);
+    win.document.close();
+  }
+
+  // ─── Toast ──────────────────────────────────────────────────────────────────
+  let toastTimer;
+  function toast(msg) {
+    document.querySelector('.toast')?.remove();
+    const t = document.createElement('div');
+    t.className = 'toast sm animate-in'; t.setAttribute('role', 'status'); t.textContent = msg;
+    document.body.appendChild(t);
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.remove(), 2600);
+  }
+
+  // ─── Wiring ─────────────────────────────────────────────────────────────────
+  $('back').innerHTML = I.chevLeft;
+  $('searchIcon').innerHTML = I.search;
+  $('clearSearch').innerHTML = I.close;
+  $('camBtn').innerHTML = I.camera;
+
+  $('back').addEventListener('click', goBack);
+
+  $('search').addEventListener('input', e => { searchQuery = e.target.value; render(); });
+  $('clearSearch').addEventListener('click', () => { searchQuery = ''; $('search').value = ''; render(); $('search').focus(); });
+
+  $('bottomBtn').addEventListener('click', () => {
+    openModal({ projects: 'project', project: 'floor', floor: 'room', room: 'element' }[view.type]);
+  });
+
+  $('camBtn').addEventListener('click', () => $('camInput').click());
+  $('camInput').addEventListener('change', e => {
+    const f = e.currentTarget.files?.[0];
+    if (f) toast(`Captured ${f.name}`);
+    e.currentTarget.value = '';
+  });
+
+  // List + detail actions (event delegation)
+  $('content').addEventListener('click', e => {
+    const edit = e.target.closest('[data-edit]');
+    if (edit) {
+      e.stopPropagation();
+      const kind = edit.dataset.edit;
+      openModal(kind, db[COLLECTION[kind]].find(x => x.id === edit.dataset.id));
+      return;
+    }
+    const del = e.target.closest('[data-del]');
+    if (del) {
+      e.stopPropagation();
+      DELETE[del.dataset.del](del.dataset.id);
+      persist(); render();
+      return;
+    }
+    const action = e.target.closest('[data-action]')?.dataset.action;
+    if (action === 'qr-download') return qrDownload();
+    if (action === 'qr-print') return qrPrint();
+    if (action === 'copy-url') {
+      const url = elementUrl(context().element);
+      if (navigator.clipboard) navigator.clipboard.writeText(url).then(() => toast('Link copied'), () => toast(url));
+      else toast(url);
+      return;
+    }
+    if (action === 'delete-current') {
+      const { element, room } = context();
+      deleteElement(element.id); persist();
+      return go({ type: 'room', roomId: room.id }, { replace: true });
+    }
+    const row = e.target.closest('[data-go]');
+    if (row) {
+      const target = JSON.parse(row.dataset.go);
+      if (target.fromSearch) { searchQuery = ''; $('search').value = ''; delete target.fromSearch; }
+      go(target);
+    }
+  });
+  $('content').addEventListener('keydown', e => {
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-go]')) { e.preventDefault(); e.target.click(); }
+  });
+
+  // Modal events
+  $('modalRoot').addEventListener('click', e => {
+    if (e.target.id === 'overlay') return closeModal();
+    const action = e.target.closest('[data-action]')?.dataset.action;
+    if (action === 'close-modal') return closeModal();
+    if (action === 'pick-files') return $('fileInput').click();
+    const rm = e.target.closest('[data-remove-file]');
+    if (rm) { modal.files = modal.files.filter(f => f.id !== rm.dataset.removeFile); renderPicker(); }
+  });
+  $('modalRoot').addEventListener('change', e => {
+    if (e.target.id === 'fileInput') { addFiles(e.target.files); e.target.value = ''; }
+  });
+  $('modalRoot').addEventListener('submit', e => { e.preventDefault(); submitModal(e.target); });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && modal) closeModal();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
